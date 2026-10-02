@@ -9,9 +9,9 @@ import type { SqlExecutor } from '@nestjs/store-kit/postgres';
  */
 export interface PostgresWebhookStoreOptions {
   /**
-   * How the store reaches the database: `fromPg(pool)`, `fromDrizzle(db)`, `fromTypeOrm(dataSource)`,
-   * `fromPrisma(prisma)` or `fromKysely(db)`. Every statement and transaction of the store runs on it; none joins the
-   * application's transactions (the outbox carries a dispatched message out of them).
+   * How the store reaches the database: `fromPg(pool)`, `fromSequelize(sequelize)`, `fromDrizzle(db)`,
+   * `fromTypeOrm(dataSource)`, `fromPrisma(prisma)` or `fromKysely(db)`. Every statement and transaction of the store
+   * runs on it; none joins the application's transactions (the outbox carries a dispatched message out of them).
    */
   executor: SqlExecutor<'postgres'>;
   /**

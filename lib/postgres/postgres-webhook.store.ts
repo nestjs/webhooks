@@ -49,9 +49,9 @@ const MESSAGE_PREFIX = 'm_';
 
 /**
  * The first-party `WebhookEndpointStore` and `WebhookDeliveryStore` on PostgreSQL, through the client the application
- * already has (`fromPg()`, `fromDrizzle()`, `fromTypeOrm()`, `fromPrisma()`, `fromKysely()`). It keeps its tables in a
- * schema of its own (`nest_webhooks` by default), which its migrations create and bring up to date. Endpoint secrets
- * are stored as the package hands them over: sealed when `WebhooksModule` has `encryption` keys.
+ * already has (`fromPg()`, `fromSequelize()`, `fromDrizzle()`, `fromTypeOrm()`, `fromPrisma()`, `fromKysely()`). It keeps
+ * its tables in a schema of its own (`nest_webhooks` by default), which its migrations create and bring up to date.
+ * Endpoint secrets are stored as the package hands them over: sealed when `WebhooksModule` has `encryption` keys.
  *
  * ```ts
  * @Module({

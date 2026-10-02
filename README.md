@@ -23,7 +23,7 @@
 
 ## Description
 
-Webhooks module for [Nest](https://github.com/nestjs/nest): outgoing webhooks dispatched in the same database transaction as the change they announce, fanned out to subscribed endpoints, signed the Standard Webhooks way, retried with backoff and logged, with SSRF protection, and incoming webhooks verified on the raw body (Standard Webhooks, Stripe, GitHub) and deduplicated. Built on @nestjs/outbox, with first-party PostgreSQL and MySQL stores (`@nestjs/webhooks/postgres` and `@nestjs/webhooks/mysql`, through the application's node-postgres or mysql2, Drizzle, TypeORM, Prisma or Kysely) and no third-party dependencies.
+Webhooks module for [Nest](https://github.com/nestjs/nest): outgoing webhooks dispatched in the same database transaction as the change they announce, fanned out to subscribed endpoints, signed the Standard Webhooks way, retried with backoff and logged, with SSRF protection, and incoming webhooks verified on the raw body (Standard Webhooks, Stripe, GitHub) and deduplicated. Built on @nestjs/outbox, with first-party PostgreSQL and MySQL stores (`@nestjs/webhooks/postgres` and `@nestjs/webhooks/mysql`, through the application's node-postgres or mysql2, Sequelize, Drizzle, TypeORM, Prisma or Kysely) and no third-party dependencies.
 
 ## Installation
 

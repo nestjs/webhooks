@@ -8,5 +8,5 @@ export { WebhookSchemaError } from '../postgres/errors/index.js';
 export type { MySqlWebhookStoreOptions } from './interfaces/index.js';
 
 // Executors: the store's SQL through the application's pool or ORM, and its transactions
-export { fromDrizzle, fromKysely, fromMysql2, fromPrisma, fromTypeOrm, type PrismaExecutorOptions } from '@nestjs/store-kit/mysql';
+export { fromDrizzle, fromKysely, fromMysql2, fromPrisma, fromSequelize, fromTypeOrm, type PrismaExecutorOptions } from '@nestjs/store-kit/mysql';
 export type { SqlExecutor, SqlIsolationLevel, SqlTransaction, SqlTransactionOptions } from '@nestjs/store-kit/mysql';
