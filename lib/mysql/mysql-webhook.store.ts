@@ -55,10 +55,10 @@ const CLAIMED_MESSAGE_COLUMNS = MESSAGE_COLUMNS.map((column) => `CAST(m.${quoteI
 
 /**
  * The first-party `WebhookEndpointStore` and `WebhookDeliveryStore` on MySQL (8.4 LTS and 9.x), through the client the
- * application already has (`fromMysql2()`, `fromDrizzle()`, `fromTypeOrm()`, `fromPrisma()`, `fromKysely()`). Its tables
- * live in the connection's database, named after its `schema` (`nest_webhooks_endpoints`...), which its migrations
- * create and bring up to date. Endpoint secrets are stored as the package hands them over: sealed when `WebhooksModule`
- * has `encryption` keys.
+ * application already has (`fromMysql2()`, `fromSequelize()`, `fromDrizzle()`, `fromTypeOrm()`, `fromPrisma()`,
+ * `fromKysely()`). Its tables live in the connection's database, named after its `schema`
+ * (`nest_webhooks_endpoints`...), which its migrations create and bring up to date. Endpoint secrets are stored as the
+ * package hands them over: sealed when `WebhooksModule` has `encryption` keys.
  *
  * ```ts
  * @Module({

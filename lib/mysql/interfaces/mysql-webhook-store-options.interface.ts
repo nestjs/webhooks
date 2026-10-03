@@ -9,10 +9,12 @@ import type { SqlExecutor } from '@nestjs/store-kit/mysql';
  */
 export interface MySqlWebhookStoreOptions {
   /**
-   * How the store reaches the database: `fromMysql2(pool)`, `fromDrizzle(db)`, `fromTypeOrm(dataSource)`,
-   * `fromPrisma(prisma)` or `fromKysely(db)` from `@nestjs/webhooks/mysql`. The store's tables live in its connections'
-   * database (the one the pool or ORM connects to). Every statement and transaction of the store runs on it; none
-   * joins the application's transactions (the outbox carries a dispatched message out of them).
+   * How the store reaches the database: `fromMysql2(pool)`, `fromSequelize(sequelize)`, `fromDrizzle(db)`,
+   * `fromTypeOrm(dataSource)`, `fromPrisma(prisma)` or `fromKysely(db)` from `@nestjs/webhooks/mysql`. The store's
+   * tables live in its connections' database (the one the pool or ORM connects to). Every statement and transaction of
+   * the store runs on it; none joins the application's transactions (the outbox carries a dispatched message out of
+   * them). `fromSequelize()` needs mysql2's `FOUND_ROWS` client flag: Sequelize's MySQL connection manager sets
+   * `flags: "-FOUND_ROWS"` unless the instance passes `dialectOptions: { flags: '' }`.
    */
   executor: SqlExecutor<'mysql'>;
   /**
