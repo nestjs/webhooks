@@ -10,6 +10,7 @@ import { standardSecretKey } from '../lib/signing/secrets.util.js';
 import {
   HttpWebhookTransport,
   InMemoryWebhookStore,
+  InMemoryWebhookTransport,
   InvalidWebhookEndpointError,
   WebhookDeliveryNotFoundError,
   WebhookEndpointNotFoundError,
@@ -299,14 +300,53 @@ describe('retries', () => {
     await t.close();
   });
 
-  it('keeps at most delivery.maxResponseSize of the response in the log, whatever the transport returns', async () => {
-    const t = await sendingApp({ delivery: { maxResponseSize: 8_000 } });
+  it('truncates a Unicode response at the UTF-8 byte limit', async () => {
+    const t = await sendingApp({ delivery: { maxResponseSize: 5 } });
     await t.endpoints.create({ url: 'https://a.example/', eventTypes: ['*'] });
-    t.transport.respondWith({ statusCode: 200, body: 'x'.repeat(10_000) });
+    t.transport.respondWith({ statusCode: 200, body: 'a🙂b' });
     await t.transaction((tx) => t.webhooks.dispatch(tx, { type: 'a.b', data: {} }));
     await t.flush();
     const [delivery] = await t.deliveries.list({});
-    expect((await t.deliveries.get(delivery!.id))!.history[0]!.response).toHaveLength(8_000);
+    const response = (await t.deliveries.get(delivery!.id))!.history[0]!.response!;
+    expect(response).toBe('a🙂');
+    expect(Buffer.byteLength(response, 'utf8')).toBe(5);
+    await t.close();
+  });
+
+  it('keeps a response ending exactly on the UTF-8 byte boundary', async () => {
+    const t = await sendingApp({ delivery: { maxResponseSize: 3 } });
+    await t.endpoints.create({ url: 'https://a.example/', eventTypes: ['*'] });
+    t.transport.respondWith({ statusCode: 200, body: 'aéz' });
+    await t.transaction((tx) => t.webhooks.dispatch(tx, { type: 'a.b', data: {} }));
+    await t.flush();
+    const [delivery] = await t.deliveries.list({});
+    const response = (await t.deliveries.get(delivery!.id))!.history[0]!.response!;
+    expect(response).toBe('aé');
+    expect(Buffer.byteLength(response, 'utf8')).toBe(3);
+    await t.close();
+  });
+
+  it('logs an empty response when delivery.maxResponseSize is zero', async () => {
+    const t = await sendingApp({ delivery: { maxResponseSize: 0 } });
+    await t.endpoints.create({ url: 'https://a.example/', eventTypes: ['*'] });
+    t.transport.respondWith({ statusCode: 200, body: '🙂' });
+    await t.transaction((tx) => t.webhooks.dispatch(tx, { type: 'a.b', data: {} }));
+    await t.flush();
+    const [delivery] = await t.deliveries.list({});
+    expect((await t.deliveries.get(delivery!.id))!.history[0]!.response).toBe('');
+    await t.close();
+  });
+
+  it('applies the byte limit to multibyte text returned by a custom transport', async () => {
+    const transport = new InMemoryWebhookTransport().respondWith({ statusCode: 200, body: 'é🙂x' });
+    const t = await sendingApp({ transport, delivery: { maxResponseSize: 2 } });
+    await t.endpoints.create({ url: 'https://a.example/', eventTypes: ['*'] });
+    await t.transaction((tx) => t.webhooks.dispatch(tx, { type: 'a.b', data: {} }));
+    await t.flush();
+    const [delivery] = await t.deliveries.list({});
+    const response = (await t.deliveries.get(delivery!.id))!.history[0]!.response!;
+    expect(response).toBe('é');
+    expect(Buffer.byteLength(response, 'utf8')).toBe(2);
     await t.close();
   });
 

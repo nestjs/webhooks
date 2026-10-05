@@ -25,6 +25,25 @@ import type { WebhookWorkerRunResult } from '../interfaces/webhook-worker.interf
 
 type Outcome = { kind: 'delivered' | 'retried' | 'failed' | 'lost'; throttleMs?: number; endpointDisabled?: boolean };
 
+/** Keeps a valid UTF-8 prefix no longer than the response log's byte limit. */
+function truncateUtf8(body: string, maxBytes: number): string {
+  if (Buffer.byteLength(body, 'utf8') <= maxBytes) {
+    return body;
+  }
+
+  const prefix: string[] = [];
+  let size = 0;
+  for (const character of body) {
+    const bytes = Buffer.byteLength(character, 'utf8');
+    if (size + bytes > maxBytes) {
+      break;
+    }
+    prefix.push(character);
+    size += bytes;
+  }
+  return prefix.join('');
+}
+
 /** Statuses that ask the sender to slow down: the endpoint is paused in this worker. */
 const THROTTLE_STATUSES = new Set([429, 502, 503, 504]);
 const DEFAULT_THROTTLE_MS = 5_000;
@@ -309,7 +328,7 @@ export class WebhookWorker implements OnApplicationBootstrap, OnModuleDestroy {
       at: startedAt,
       durationMs,
       statusCode,
-      response: response ? response.body.slice(0, this.config.maxResponseSize) : null,
+      response: response ? truncateUtf8(response.body, this.config.maxResponseSize) : null,
       error: ok ? null : describeError(error ?? new WebhookResponseError(statusCode!)),
     };
 
