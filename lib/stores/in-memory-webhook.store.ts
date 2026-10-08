@@ -214,7 +214,7 @@ export class InMemoryWebhookStore implements WebhookEndpointStore, WebhookDelive
     return message && clone(message);
   }
 
-  listDeliveries({ tenant, endpointId, messageId, status, type, limit = 50, offset = 0 }: WebhookDeliveryQuery): WebhookDelivery[] {
+  listDeliveries({ tenant, endpointId, messageId, status, type, failureReason, lastStatusCode, limit = 50, offset = 0 }: WebhookDeliveryQuery): WebhookDelivery[] {
     return [...this.deliveryRows.values()]
       .map((row) => row.delivery)
       .filter(
@@ -223,7 +223,9 @@ export class InMemoryWebhookStore implements WebhookEndpointStore, WebhookDelive
           (endpointId === undefined || d.endpointId === endpointId) &&
           (messageId === undefined || d.messageId === messageId) &&
           (status === undefined || d.status === status) &&
-          (type === undefined || d.type === type),
+          (type === undefined || d.type === type) &&
+          (failureReason === undefined || d.failureReason === failureReason) &&
+          (lastStatusCode === undefined || d.lastStatusCode === lastStatusCode),
       )
       .sort((a, b) => b.createdAt - a.createdAt || compareDesc(a.id, b.id))
       .slice(offset, offset + limit)

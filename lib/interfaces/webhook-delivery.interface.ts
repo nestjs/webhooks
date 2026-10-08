@@ -66,6 +66,10 @@ export interface WebhookDeliveryQuery {
   messageId?: string;
   status?: WebhookDeliveryStatus;
   type?: string;
+  /** `undefined`: any reason. `null`: deliveries with no failure reason. */
+  failureReason?: WebhookDeliveryFailureReason | null;
+  /** `undefined`: any response status. `null`: no HTTP response was received. */
+  lastStatusCode?: number | null;
   /** Default 50. */
   limit?: number;
   offset?: number;

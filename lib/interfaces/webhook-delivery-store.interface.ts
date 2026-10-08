@@ -83,7 +83,7 @@ export interface WebhookDeliveryStore {
 
   getMessage(id: string): Awaitable<WebhookMessage | undefined>;
 
-  /** Newest first (`createdAt`, then `id`, descending), filtered by the fields present, `limit` 50 by default. */
+  /** Newest first (`createdAt`, then `id`, descending), filtered before pagination by the fields present; `null` matches stored null, `limit` 50 by default. */
   listDeliveries(query: WebhookDeliveryQuery): Awaitable<WebhookDelivery[]>;
 
   /** The delivery's log, oldest first (`at`, then `attempt`). */

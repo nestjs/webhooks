@@ -24,7 +24,7 @@ export class WebhookDeliveries {
     return this.storage.deliveries;
   }
 
-  /** Newest first; filter by `tenant`, `endpointId`, `messageId`, `status`, `type`. */
+  /** Newest first; filter by `tenant`, `endpointId`, `messageId`, `status`, `type`, `failureReason`, and `lastStatusCode`. */
   async list(query: WebhookDeliveryQuery = {}): Promise<WebhookDelivery[]> {
     return this.store.listDeliveries(checkPage(query, 'WebhookDeliveries.list()'));
   }

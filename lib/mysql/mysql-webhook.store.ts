@@ -454,7 +454,7 @@ WHERE ${p.in('id', [...new Set(ids)])} AND lease_owner = ${p.text(owner)}`,
     return row && toMessage(row);
   }
 
-  async listDeliveries({ tenant, endpointId, messageId, status, type, limit = DEFAULT_PAGE_SIZE, offset = 0 }: WebhookDeliveryQuery): Promise<WebhookDelivery[]> {
+  async listDeliveries({ tenant, endpointId, messageId, status, type, failureReason, lastStatusCode, limit = DEFAULT_PAGE_SIZE, offset = 0 }: WebhookDeliveryQuery): Promise<WebhookDelivery[]> {
     await this.readiness.ready();
     const p = new SqlParams();
     const where = [
@@ -463,6 +463,8 @@ WHERE ${p.in('id', [...new Set(ids)])} AND lease_owner = ${p.text(owner)}`,
       ...(messageId !== undefined ? [`d.message_id = ${p.text(messageId)}`] : []),
       ...(status !== undefined ? [`d.status = ${p.text(status)}`] : []),
       ...(type !== undefined ? [`d.type = ${p.text(type)}`] : []),
+      ...(failureReason !== undefined ? [p.equals('d.failure_reason', failureReason)] : []),
+      ...(lastStatusCode !== undefined ? [lastStatusCode === null ? 'd.last_status_code IS NULL' : `d.last_status_code = ${p.int(lastStatusCode)}`] : []),
     ];
     const rows = await this.executor.query<SqlRow>(
       `SELECT ${columns(DELIVERY_COLUMNS, 'd')} FROM ${this.t.deliveries} d${where.length > 0 ? ` WHERE ${where.join(' AND ')}` : ''}

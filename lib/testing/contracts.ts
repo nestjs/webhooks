@@ -515,6 +515,32 @@ const DELIVERY_CASES: Case<WebhookDeliveryStore>[] = [
     },
   ],
   [
+    'filters deliveries by failure reason and last status code before pagination, including nulls',
+    async (store) => {
+      const messages = [1, 2, 3, 4, 5].map((createdAt) => message({ createdAt }));
+      const deliveries = [
+        delivery(messages[0]!, 'ep_a', { status: 'succeeded', nextAttemptAt: null, completedAt: 1, lastStatusCode: 200 }),
+        delivery(messages[1]!, 'ep_a', { status: 'failed', nextAttemptAt: null, completedAt: 2, failureReason: 'exhausted', lastStatusCode: 500 }),
+        delivery(messages[2]!, 'ep_a', { status: 'failed', nextAttemptAt: null, completedAt: 3, failureReason: 'exhausted' }),
+        delivery(messages[3]!, 'ep_b', { status: 'failed', nextAttemptAt: null, completedAt: 4, failureReason: 'rejected', lastStatusCode: 500 }),
+        delivery(messages[4]!, 'ep_a'),
+      ];
+      const [succeeded, httpFailure, noResponse, rejected, pending] = deliveries;
+      for (const [index, m] of messages.entries()) {
+        await store.createDeliveries(m, [deliveries[index]!]);
+      }
+
+      assert.deepEqual(ids(await store.listDeliveries({ failureReason: 'exhausted' })), [noResponse.id, httpFailure.id]);
+      assert.deepEqual(ids(await store.listDeliveries({ failureReason: null })), [pending.id, succeeded.id]);
+      assert.deepEqual(ids(await store.listDeliveries({ lastStatusCode: 500 })), [rejected.id, httpFailure.id]);
+      assert.deepEqual(ids(await store.listDeliveries({ lastStatusCode: null })), [pending.id, noResponse.id]);
+      assert.deepEqual(ids(await store.listDeliveries({ status: 'failed', failureReason: 'exhausted', lastStatusCode: null, endpointId: 'ep_a' })), [noResponse.id]);
+      assert.deepEqual(ids(await store.listDeliveries({ tenant: 'shop-1', type: 'order.shipped', failureReason: 'exhausted', lastStatusCode: 500 })), [httpFailure.id]);
+      assert.deepEqual(ids(await store.listDeliveries({ failureReason: 'exhausted', limit: 1, offset: 1 })), [httpFailure.id]);
+      assert.deepEqual(ids(await store.listDeliveries({ lastStatusCode: null, limit: 1, offset: 1 })), [noResponse.id]);
+    },
+  ],
+  [
     'retries matching deliveries in a new round, keeping the log, never one under a lease',
     async (store) => {
       const m = message();

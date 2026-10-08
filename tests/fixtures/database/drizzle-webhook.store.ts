@@ -245,7 +245,7 @@ export class DrizzleWebhookStore implements WebhookEndpointStore, WebhookDeliver
     return row && toMessage(row);
   }
 
-  async listDeliveries({ tenant, endpointId, messageId, status, type, limit = 50, offset = 0 }: WebhookDeliveryQuery): Promise<WebhookDelivery[]> {
+  async listDeliveries({ tenant, endpointId, messageId, status, type, failureReason, lastStatusCode, limit = 50, offset = 0 }: WebhookDeliveryQuery): Promise<WebhookDelivery[]> {
     const rows = await this.db
       .select()
       .from(webhookDeliveries)
@@ -256,6 +256,8 @@ export class DrizzleWebhookStore implements WebhookEndpointStore, WebhookDeliver
           messageId === undefined ? undefined : eq(webhookDeliveries.messageId, messageId),
           status === undefined ? undefined : eq(webhookDeliveries.status, status),
           type === undefined ? undefined : eq(webhookDeliveries.type, type),
+          failureReason === undefined ? undefined : failureReason === null ? isNull(webhookDeliveries.failureReason) : eq(webhookDeliveries.failureReason, failureReason),
+          lastStatusCode === undefined ? undefined : lastStatusCode === null ? isNull(webhookDeliveries.lastStatusCode) : eq(webhookDeliveries.lastStatusCode, lastStatusCode),
         ),
       )
       .orderBy(desc(webhookDeliveries.createdAt), desc(webhookDeliveries.id))
