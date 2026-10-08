@@ -239,7 +239,7 @@ describe('dispatch()', () => {
 });
 
 describe('the delivery log', () => {
-  it('filters by type, status and tenant, newest first, with limit and offset', async () => {
+  it('filters by type, status, tenant, failure reason and last status code, newest first, with limit and offset', async () => {
     const clock = controllableClock();
     const t = await sendingApp({ retry: false });
     await t.endpoints.create({ url: 'https://a.example/', eventTypes: ['*'], tenant: 'shop-1' });
@@ -278,6 +278,8 @@ describe('the delivery log', () => {
     expect(shape(await t.deliveries.list({ lastStatusCode: null, failureReason: null }))).toEqual(['order.shipped/shop-1/pending']);
     await expect(t.deliveries.list({ offset: 1.5 })).rejects.toThrow(/offset must be a whole number/);
     await expect(t.deliveries.list({ limit: 0 })).rejects.toThrow(/limit must be a whole number of at least 1/);
+    await expect(t.deliveries.list({ lastStatusCode: '500' as never })).rejects.toThrow(/lastStatusCode must be an HTTP status code/);
+    await expect(t.deliveries.list({ lastStatusCode: 1e10 })).rejects.toThrow(/lastStatusCode must be an HTTP status code/);
     await t.close();
   });
 

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { toMs } from '../utils/duration.util.js';
 import type { Duration } from '../interfaces/duration.interface.js';
-import { checkPage } from '../utils/query.util.js';
+import { checkPage, checkStatusCode } from '../utils/query.util.js';
 import { WebhookDeliveryNotFoundError } from '../errors/webhook-delivery-not-found.error.js';
 import type { WebhookDelivery, WebhookDeliveryDetails, WebhookDeliveryFilter, WebhookDeliveryQuery, WebhookDeliveryStats } from '../interfaces/webhook-delivery.interface.js';
 import type { WebhookTenantScope } from '../interfaces/webhook-endpoint.interface.js';
@@ -26,7 +26,7 @@ export class WebhookDeliveries {
 
   /** Newest first; filter by `tenant`, `endpointId`, `messageId`, `status`, `type`, `failureReason`, and `lastStatusCode`. */
   async list(query: WebhookDeliveryQuery = {}): Promise<WebhookDelivery[]> {
-    return this.store.listDeliveries(checkPage(query, 'WebhookDeliveries.list()'));
+    return this.store.listDeliveries(checkStatusCode(checkPage(query, 'WebhookDeliveries.list()'), 'WebhookDeliveries.list()'));
   }
 
   /** The delivery, its message and every attempt (status code, duration, the start of the response, the error). */
@@ -60,10 +60,20 @@ export class WebhookDeliveries {
       filter = { ids: [target] };
     } else {
 
-      const { ids, endpointId, tenant, status, since, all } = target ?? {};
-      if (!all && ids === undefined && endpointId === undefined && tenant === undefined && status === undefined && since === undefined) {
+      const { ids, endpointId, tenant, status, since, failureReason, lastStatusCode, all } = target ?? {};
+      if (
+        !all &&
+        ids === undefined &&
+        endpointId === undefined &&
+        tenant === undefined &&
+        status === undefined &&
+        since === undefined &&
+        failureReason === undefined &&
+        lastStatusCode === undefined
+      ) {
         throw new Error('Refusing an empty delivery filter; pass { all: true } to retry every delivery');
       }
+      checkStatusCode(target, 'WebhookDeliveries.retry()');
       if (ids !== undefined && (!Array.isArray(ids) || ids.some((id) => typeof id !== 'string'))) {
         throw new TypeError('WebhookDeliveries.retry(): ids must be an array of delivery ids');
       }

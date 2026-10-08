@@ -237,8 +237,17 @@ export class InMemoryWebhookStore implements WebhookEndpointStore, WebhookDelive
   }
 
   retryDeliveries(filter: WebhookDeliveryFilter, now: number): number {
-    const { ids, endpointId, tenant, status, since, all } = filter;
-    if (!all && ids === undefined && endpointId === undefined && tenant === undefined && status === undefined && since === undefined) {
+    const { ids, endpointId, tenant, status, since, failureReason, lastStatusCode, all } = filter;
+    if (
+      !all &&
+      ids === undefined &&
+      endpointId === undefined &&
+      tenant === undefined &&
+      status === undefined &&
+      since === undefined &&
+      failureReason === undefined &&
+      lastStatusCode === undefined
+    ) {
       throw new Error('Refusing an empty delivery filter; pass { all: true } to retry every delivery');
     }
 
@@ -260,6 +269,12 @@ export class InMemoryWebhookStore implements WebhookEndpointStore, WebhookDelive
         continue;
       }
       if (since !== undefined && d.createdAt < +since) {
+        continue;
+      }
+      if (failureReason !== undefined && d.failureReason !== failureReason) {
+        continue;
+      }
+      if (lastStatusCode !== undefined && d.lastStatusCode !== lastStatusCode) {
         continue;
       }
       if (row.leaseUntil !== null && row.leaseUntil > now) {

@@ -323,13 +323,15 @@ function tenantIs(column: typeof webhookEndpoints.tenant | typeof webhookDeliver
 }
 
 /** The filter's fields combined with AND; an empty filter is refused unless it says `all`. */
-function deliveryFilter({ ids, endpointId, tenant, status, since, all }: WebhookDeliveryFilter): SQL | undefined {
+function deliveryFilter({ ids, endpointId, tenant, status, since, failureReason, lastStatusCode, all }: WebhookDeliveryFilter): SQL | undefined {
   const conditions: (SQL | undefined)[] = [];
   if (ids) conditions.push(ids.length === 0 ? sql`false` : inArray(webhookDeliveries.id, [...ids]));
   if (endpointId !== undefined) conditions.push(eq(webhookDeliveries.endpointId, endpointId));
   if (tenant !== undefined) conditions.push(tenantIs(webhookDeliveries.tenant, tenant));
   if (status !== undefined) conditions.push(eq(webhookDeliveries.status, status));
   if (since !== undefined) conditions.push(gte(webhookDeliveries.createdAt, new Date(+since)));
+  if (failureReason !== undefined) conditions.push(failureReason === null ? isNull(webhookDeliveries.failureReason) : eq(webhookDeliveries.failureReason, failureReason));
+  if (lastStatusCode !== undefined) conditions.push(lastStatusCode === null ? isNull(webhookDeliveries.lastStatusCode) : eq(webhookDeliveries.lastStatusCode, lastStatusCode));
   if (conditions.length === 0 && !all) throw new Error('Refusing an empty delivery filter; pass { all: true } to retry every delivery');
   return and(...conditions);
 }

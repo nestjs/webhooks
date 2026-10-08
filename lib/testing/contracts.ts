@@ -569,6 +569,10 @@ const DELIVERY_CASES: Case<WebhookDeliveryStore>[] = [
 
       assert.equal(await store.retryDeliveries({ tenant: 'shop-2' }, 1_500), 0);
       assert.equal(await store.retryDeliveries({ since: 1_001 }, 1_500), 0);
+      assert.equal(await store.retryDeliveries({ failureReason: 'exhausted' }, 1_500), 0);
+      assert.equal(await store.retryDeliveries({ failureReason: 'rejected', lastStatusCode: 500 }, 1_500), 0);
+      assert.equal(await store.retryDeliveries({ failureReason: 'rejected', lastStatusCode: null }, 1_500), 1);
+      assert.equal((await store.getDelivery(otherEndpoint.id))!.failureReason, null);
       assert.equal(await store.retryDeliveries({ all: true }, 1_500), 3);
     },
   ],

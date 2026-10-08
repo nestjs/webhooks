@@ -12,3 +12,15 @@ export function checkPage<Q extends { limit?: number; offset?: number }>(query: 
   }
   return query;
 }
+
+/**
+ * `lastStatusCode` as a store compares it: an HTTP status, `null`, or absent. A partner API passes it from the query
+ * string; a string would match nothing in memory and fail in a SQL store instead.
+ */
+export function checkStatusCode<Q extends { lastStatusCode?: number | null }>(query: Q, where: string): Q {
+  const { lastStatusCode } = query;
+  if (lastStatusCode !== undefined && lastStatusCode !== null && (!Number.isInteger(lastStatusCode) || lastStatusCode < 100 || lastStatusCode > 599)) {
+    throw new TypeError(`${where}: lastStatusCode must be an HTTP status code (100-599) or null (got ${lastStatusCode})`);
+  }
+  return query;
+}

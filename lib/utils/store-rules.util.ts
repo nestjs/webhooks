@@ -57,8 +57,17 @@ export function endpointFailure(
 }
 
 /** `retryDeliveries()` refuses a filter that names no deliveries, unless it says `all`. */
-export function assertDeliveryFilter({ ids, endpointId, tenant, status, since, all }: WebhookDeliveryFilter): void {
-  if (!all && ids === undefined && endpointId === undefined && tenant === undefined && status === undefined && since === undefined) {
+export function assertDeliveryFilter({ ids, endpointId, tenant, status, since, failureReason, lastStatusCode, all }: WebhookDeliveryFilter): void {
+  if (
+    !all &&
+    ids === undefined &&
+    endpointId === undefined &&
+    tenant === undefined &&
+    status === undefined &&
+    since === undefined &&
+    failureReason === undefined &&
+    lastStatusCode === undefined
+  ) {
     throw new Error('Refusing an empty delivery filter; pass { all: true } to retry every delivery');
   }
 }
