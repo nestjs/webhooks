@@ -91,6 +91,13 @@ describe('HttpWebhookTransport', () => {
     expect(response.headers).toMatchObject({ 'set-cookie': 'a=1, b=2', 'retry-after': '30' });
   });
 
+  it('cuts the body at maxResponseSize bytes without splitting a character', async () => {
+    handler = (_req, res) => res.writeHead(200).end('ab🙂c');
+    expect((await send(local({ maxResponseSize: 3 }), `http://127.0.0.1:${server.port}/`)).body).toBe('ab');
+    expect((await send(local({ maxResponseSize: 5 }), `http://127.0.0.1:${server.port}/`)).body).toBe('ab');
+    expect((await send(local({ maxResponseSize: 6 }), `http://127.0.0.1:${server.port}/`)).body).toBe('ab🙂');
+  });
+
   it('reads no body with maxResponseSize: 0, and refuses a size that is not a whole number', async () => {
     handler = (_req, res) => res.writeHead(200).end('a body nobody asked for');
     expect(await send(local({ maxResponseSize: 0 }), `http://127.0.0.1:${server.port}/`)).toMatchObject({ statusCode: 200, body: '' });

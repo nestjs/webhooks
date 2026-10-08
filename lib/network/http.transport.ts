@@ -2,6 +2,7 @@ import { lookup as dnsLookup } from 'node:dns/promises';
 import { request as httpRequest, type IncomingMessage } from 'node:http';
 import { request as httpsRequest, type RequestOptions as HttpsRequestOptions } from 'node:https';
 import { isIP, type LookupFunction } from 'node:net';
+import { StringDecoder } from 'node:string_decoder';
 import { createSecureContext, getCACertificates, rootCertificates, type SecureContext } from 'node:tls';
 import { WebhookDestinationBlockedError } from '../errors/webhook-destination-blocked.error.js';
 import { WebhookTransport } from '../transports/webhook.transport.js';
@@ -144,15 +145,17 @@ export class HttpWebhookTransport extends WebhookTransport {
         let size = 0;
         let settled = false;
 
-        const finish = () => {
+        const finish = (cut: boolean) => {
           if (settled) {
             return;
           }
           settled = true;
+          const bytes = Buffer.concat(chunks);
           resolve({
             statusCode: res.statusCode ?? 0,
             headers: flatten(res.headers),
-            body: Buffer.concat(chunks).toString('utf8'),
+            // A cut body may end mid-character: its incomplete tail is dropped rather than decoded to U+FFFD.
+            body: cut ? new StringDecoder('utf8').write(bytes) : bytes.toString('utf8'),
           });
           // Nothing more is read: close the connection instead of draining a large body.
           res.destroy();
@@ -166,10 +169,10 @@ export class HttpWebhookTransport extends WebhookTransport {
           }
           size += chunk.length;
           if (size >= this.maxResponseSize) {
-            finish();
+            finish(true);
           }
         });
-        res.on('end', finish);
+        res.on('end', () => finish(false));
         res.on('error', (error) => {
           if (!settled) {
             settled = true;
@@ -183,7 +186,7 @@ export class HttpWebhookTransport extends WebhookTransport {
           }
         });
         if (this.maxResponseSize === 0) {
-          finish();
+          finish(true);
         }
 
       });

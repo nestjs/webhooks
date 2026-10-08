@@ -11,6 +11,7 @@ import { WebhookDeliveryTimeoutError } from '../errors/webhook-delivery-timeout.
 import { WebhookResponseError } from '../errors/webhook-response.error.js';
 import { WebhookDestinationBlockedError } from '../errors/webhook-destination-blocked.error.js';
 import { describeError } from '../utils/describe-error.util.js';
+import { truncateUtf8 } from '../utils/truncate-utf8.util.js';
 import { WebhooksEvents } from '../events/webhooks-events.service.js';
 import type { WebhooksEvent } from '../events/webhooks-events.interface.js';
 import type { WebhookClaimedDelivery, WebhookDeliveryUpdate } from '../interfaces/webhook-delivery-store.interface.js';
@@ -24,25 +25,6 @@ import type { WebhookTransportResponse } from '../interfaces/webhook-transport.i
 import type { WebhookWorkerRunResult } from '../interfaces/webhook-worker.interface.js';
 
 type Outcome = { kind: 'delivered' | 'retried' | 'failed' | 'lost'; throttleMs?: number; endpointDisabled?: boolean };
-
-/** Keeps a valid UTF-8 prefix no longer than the response log's byte limit. */
-function truncateUtf8(body: string, maxBytes: number): string {
-  if (Buffer.byteLength(body, 'utf8') <= maxBytes) {
-    return body;
-  }
-
-  const prefix: string[] = [];
-  let size = 0;
-  for (const character of body) {
-    const bytes = Buffer.byteLength(character, 'utf8');
-    if (size + bytes > maxBytes) {
-      break;
-    }
-    prefix.push(character);
-    size += bytes;
-  }
-  return prefix.join('');
-}
 
 /** Statuses that ask the sender to slow down: the endpoint is paused in this worker. */
 const THROTTLE_STATUSES = new Set([429, 502, 503, 504]);

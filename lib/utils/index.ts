@@ -7,5 +7,6 @@ export * from './query.util.js';
 export * from './resolve-config.util.js';
 export * from './sql-rows.util.js';
 export * from './store-rules.util.js';
+export * from './truncate-utf8.util.js';
 export * from './uuid.util.js';
 export * from './verified-webhook.util.js';
