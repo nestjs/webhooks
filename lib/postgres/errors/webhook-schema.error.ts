@@ -10,7 +10,7 @@ import { WebhooksError } from '../../errors/webhooks.error.js';
  *   await app.init();
  * } catch (error) {
  *   if (error instanceof WebhookSchemaError) {
- *     console.error(`Run: npx nest-webhooks migrate --schema ${error.schema} (at ${error.version}, needs ${error.requiredVersion})`);
+ *     console.error(`Run: npx @nestjs/webhooks migrate --schema ${error.schema} (at ${error.version}, needs ${error.requiredVersion})`);
  *   }
  *   throw error;
  * }
