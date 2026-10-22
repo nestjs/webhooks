@@ -31,7 +31,7 @@ describe('nest-webhooks', () => {
   it('prints its usage for --help, and on stderr, exiting with 1, for no command, an unknown one or an unknown option', async () => {
     const help = await run(['--help']);
     expect(help).toMatchObject({ code: 0, err: '' });
-    expect(help.out).toMatch(/^Usage: nest-webhooks <command> \[options\]/);
+    expect(help.out).toMatch(/^Usage: npx @nestjs\/webhooks <command> \[options\]/);
     expect(help.out).toContain("\n\nPostgresWebhookStore's schema (@nestjs/webhooks/postgres) or MySqlWebhookStore's (@nestjs/webhooks/mysql):\n\n  migrate   ");
     expect(help.out).toContain('--schema <name>    The store\'s schema. Default: nest_webhooks');
     expect(await run([])).toEqual({ code: 1, out: '', err: help.out });
@@ -40,12 +40,12 @@ describe('nest-webhooks', () => {
   });
 
   it('needs the database for migrate and status: --url, else DATABASE_URL, of PostgreSQL or MySQL', async () => {
-    expect(await run(['migrate'])).toEqual({ code: 1, out: '', err: 'nest-webhooks migrate needs the database: pass --url, or set DATABASE_URL.\n' });
-    expect((await run(['status'])).err).toBe('nest-webhooks status needs the database: pass --url, or set DATABASE_URL.\n');
+    expect(await run(['migrate'])).toEqual({ code: 1, out: '', err: 'npx @nestjs/webhooks migrate needs the database: pass --url, or set DATABASE_URL.\n' });
+    expect((await run(['status'])).err).toBe('npx @nestjs/webhooks status needs the database: pass --url, or set DATABASE_URL.\n');
     expect(await run(['migrate', '--url', 'sqlite:///tmp/shop.db'])).toEqual({
       code: 1,
       out: '',
-      err: 'nest-webhooks migrate takes a database URL that starts with postgres:// or postgresql:// or mysql://.\n',
+      err: 'npx @nestjs/webhooks migrate takes a database URL that starts with postgres:// or postgresql:// or mysql://.\n',
     });
   });
 
