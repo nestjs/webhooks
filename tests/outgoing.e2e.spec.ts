@@ -415,6 +415,26 @@ describe('endpoint health', () => {
     await t.close();
   });
 
+  it.each([
+    ['a failed', { retry: false }, { failed: 1 }],
+    ['a retried', {}, { retried: 1 }],
+  ] as const)('resets the clock on a success that follows %s delivery to the same endpoint in one batch', async (_, options, counts) => {
+    const clock = controllableClock();
+    const t = await sendingApp({ disableEndpointAfter: '1h', ...options });
+    const endpoint = await t.endpoints.create({ url: 'https://flaky.example/', eventTypes: ['*'] });
+    t.transport.respondWith(() => (t.transport.sent.length === 1 ? 500 : 200));
+    await t.transaction((tx) => t.webhooks.dispatch(tx, { type: 'a.b', data: 1 }));
+    await t.transaction((tx) => t.webhooks.dispatch(tx, { type: 'a.b', data: 2 }));
+    expect(await t.flush()).toMatchObject({ claimed: 2, delivered: 1, ...counts });
+    expect((await t.endpoints.get(endpoint.id))!.failingSince).toBeNull();
+    clock.advance(2 * 60 * 60_000);
+    t.transport.respondWith(500);
+    await t.transaction((tx) => t.webhooks.dispatch(tx, { type: 'a.b', data: 3 }));
+    await t.flush();
+    expect(await t.endpoints.get(endpoint.id)).toMatchObject({ enabled: true, disabledReason: null });
+    await t.close();
+  });
+
   it('fails pending deliveries of an endpoint that was deleted or disabled, without sending', async () => {
     const t = await sendingApp();
     const deleted = await t.endpoints.create({ url: 'https://a.example/', eventTypes: ['*'] });

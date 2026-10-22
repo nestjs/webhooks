@@ -24,7 +24,7 @@ import { WebhookTransport } from '../transports/webhook.transport.js';
 import type { WebhookTransportResponse } from '../interfaces/webhook-transport.interface.js';
 import type { WebhookWorkerRunResult } from '../interfaces/webhook-worker.interface.js';
 
-type Outcome = { kind: 'delivered' | 'retried' | 'failed' | 'lost'; throttleMs?: number; endpointDisabled?: boolean };
+type Outcome = { kind: 'delivered' | 'retried' | 'failed' | 'lost'; throttleMs?: number; endpointFailing?: boolean; endpointDisabled?: boolean };
 
 /** Statuses that ask the sender to slow down: the endpoint is paused in this worker. */
 const THROTTLE_STATUSES = new Set([429, 502, 503, 504]);
@@ -247,6 +247,10 @@ export class WebhookWorker implements OnApplicationBootstrap, OnModuleDestroy {
       if (outcome.endpointDisabled && endpoint) {
         endpoint = { ...endpoint, enabled: false };
       }
+      // The store started the failure clock: a later success in this group must reset it.
+      if (outcome.endpointFailing && endpoint && endpoint.failingSince === null) {
+        endpoint = { ...endpoint, failingSince: Date.now() };
+      }
 
       if (outcome.throttleMs !== undefined) {
         const until = Date.now() + outcome.throttleMs;
@@ -367,7 +371,7 @@ export class WebhookWorker implements OnApplicationBootstrap, OnModuleDestroy {
         event: { type: 'delivery-failed', delivery, error: failure, statusCode, attempt, reason },
         kind: 'failed',
       });
-      return { ...outcome, throttleMs, endpointDisabled: endpointDisabled === true };
+      return { ...outcome, throttleMs, endpointFailing: endpointDisabled !== undefined, endpointDisabled: endpointDisabled === true };
     }
 
     const delayMs = Math.max(this.backoff(attempt, failure, delivery), retryAfterMs ?? 0);
@@ -379,7 +383,7 @@ export class WebhookWorker implements OnApplicationBootstrap, OnModuleDestroy {
       event: { type: 'retry-scheduled', delivery, error: failure, statusCode, attempt, delayMs },
       kind: 'retried',
     });
-    return { ...outcome, throttleMs, endpointDisabled: endpointDisabled === true };
+    return { ...outcome, throttleMs, endpointFailing: endpointDisabled !== undefined, endpointDisabled: endpointDisabled === true };
   }
 
   /** Signs with every live secret and sends, within `delivery.timeout` even if the transport ignores its signal. */
