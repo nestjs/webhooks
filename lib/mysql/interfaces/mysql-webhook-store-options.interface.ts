@@ -25,8 +25,8 @@ export interface MySqlWebhookStoreOptions {
    * Apply the store's pending migrations at startup, one statement at a time under a lock (`GET_LOCK()`), so processes
    * that start together migrate once, and a run that failed resumes where it stopped. With `false`, startup fails with
    * a `WebhookSchemaError` while the schema is behind this version of the package: apply them with
-   * `npx nest-webhooks migrate`, or with your own migration tool (`MySqlWebhookStore.migrationStatements()`). Default:
-   * `true`, except when `NODE_ENV` is `production`.
+   * `npx @nestjs/webhooks migrate`, or with your own migration tool (`MySqlWebhookStore.migrationStatements()`).
+   * Default: `true`, except when `NODE_ENV` is `production`.
    */
   migrate?: boolean;
 }

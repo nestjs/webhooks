@@ -239,7 +239,7 @@ describe('a MySQL schema behind the code, and one ahead of it', () => {
     expect(error).toMatchObject({ name: 'WebhookSchemaError', schema: 'm_behind', version: 0, requiredVersion: 1 });
     expect((error as Error).message).toBe(
       'MySqlWebhookStore: schema "m_behind" is at version 0, and this version of @nestjs/webhooks needs version 1. Apply its migrations: ' +
-        'set `migrate: true` to apply them at startup, run `npx nest-webhooks migrate --url <database url> --schema m_behind`, ' +
+        'set `migrate: true` to apply them at startup, run `npx @nestjs/webhooks migrate --url <database url> --schema m_behind`, ' +
         "or apply `MySqlWebhookStore.migrationSql({ schema: 'm_behind', from: 0 })` with your migration tool.",
     );
     await expect(behind.getEndpoint('any')).rejects.toThrow(WebhookSchemaError);
