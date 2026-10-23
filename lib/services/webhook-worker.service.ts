@@ -24,7 +24,7 @@ import { WebhookTransport } from '../transports/webhook.transport.js';
 import type { WebhookTransportResponse } from '../interfaces/webhook-transport.interface.js';
 import type { WebhookWorkerRunResult } from '../interfaces/webhook-worker.interface.js';
 
-type Outcome = { kind: 'delivered' | 'retried' | 'failed' | 'lost'; throttleMs?: number; endpointFailing?: boolean; endpointDisabled?: boolean };
+type Outcome = { kind: 'delivered' | 'retried' | 'failed' | 'lost'; throttleMs?: number };
 
 /** Statuses that ask the sender to slow down: the endpoint is paused in this worker. */
 const THROTTLE_STATUSES = new Set([429, 502, 503, 504]);
@@ -43,6 +43,8 @@ const PAUSE_SWEEP_SIZE = 1_000;
  *   (`worker.concurrency`). A 429, 502, 503 or 504 pauses the endpoint in this worker for
  *   `Retry-After` (5s without one, `backoff.maxDelay` at most): the rest of its batch and its
  *   deliveries in later batches are released to that time without an attempt.
+ * - The endpoint is read again before each attempt: a disable, a delete, a new URL or a rotation
+ *   applies to the rest of the batch (the attempt in flight goes out as it started).
  * - Every attempt is signed at send time: a fresh `webhook-timestamp`, the same `webhook-id`.
  * - `stop()` stops claiming, waits for attempts in flight, and releases what it hasn't started.
  */
@@ -226,13 +228,15 @@ export class WebhookWorker implements OnApplicationBootstrap, OnModuleDestroy {
       this.pausedUntil.delete(endpointId);
     }
 
-    let endpoint = await this.endpoints.getEndpoint(endpointId);
     for (let i = 0; i < group.length; i++) {
       // Never start an attempt that could outlive the lease: another worker could claim the delivery and send it too.
       if (this.stopping || Date.now() + this.config.timeoutMs > leaseUntil) {
         return this.release(group.slice(i), owner, result);
       }
 
+      // Read before each attempt, not once per group: the endpoint may have been disabled, deleted, moved or had
+      // its secret rotated (or the previous attempt changed its health) since.
+      const endpoint = await this.endpoints.getEndpoint(endpointId);
       const outcome = await this.deliver(group[i]!, endpoint, owner);
       if (outcome.kind === 'delivered') {
         result.delivered++;
@@ -242,14 +246,6 @@ export class WebhookWorker implements OnApplicationBootstrap, OnModuleDestroy {
         result.failed++;
       } else {
         result.leaseLost++;
-      }
-
-      if (outcome.endpointDisabled && endpoint) {
-        endpoint = { ...endpoint, enabled: false };
-      }
-      // The store started the failure clock: a later success in this group must reset it.
-      if (outcome.endpointFailing && endpoint && endpoint.failingSince === null) {
-        endpoint = { ...endpoint, failingSince: Date.now() };
       }
 
       if (outcome.throttleMs !== undefined) {
@@ -371,7 +367,7 @@ export class WebhookWorker implements OnApplicationBootstrap, OnModuleDestroy {
         event: { type: 'delivery-failed', delivery, error: failure, statusCode, attempt, reason },
         kind: 'failed',
       });
-      return { ...outcome, throttleMs, endpointFailing: endpointDisabled !== undefined, endpointDisabled: endpointDisabled === true };
+      return { ...outcome, throttleMs };
     }
 
     const delayMs = Math.max(this.backoff(attempt, failure, delivery), retryAfterMs ?? 0);
@@ -383,7 +379,7 @@ export class WebhookWorker implements OnApplicationBootstrap, OnModuleDestroy {
       event: { type: 'retry-scheduled', delivery, error: failure, statusCode, attempt, delayMs },
       kind: 'retried',
     });
-    return { ...outcome, throttleMs, endpointFailing: endpointDisabled !== undefined, endpointDisabled: endpointDisabled === true };
+    return { ...outcome, throttleMs };
   }
 
   /** Signs with every live secret and sends, within `delivery.timeout` even if the transport ignores its signal. */
