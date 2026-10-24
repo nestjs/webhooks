@@ -454,6 +454,72 @@ describe('endpoint health', () => {
     await t.close();
   });
 
+  describe('an endpoint changed while the worker sends a batch to it', () => {
+    type Change<T = unknown> = (t: Awaited<ReturnType<typeof sendingApp>>, id: string) => Promise<T>;
+
+    /** Three deliveries to one endpoint in one batch; `change` runs while the first request is in flight. */
+    async function changeDuringFirstRequest<T>(change: Change<T>) {
+      const t = await sendingApp();
+      const endpoint = await t.endpoints.create({ url: 'https://old.example/hooks', eventTypes: ['*'] });
+      let changed: T | undefined;
+      t.transport.respondWith(async () => {
+        if (t.transport.sent.length === 1) {
+          changed = await change(t, endpoint.id);
+        }
+        return 200;
+      });
+      for (const data of [1, 2, 3]) {
+        await t.transaction((tx) => t.webhooks.dispatch(tx, { type: 'a.b', data }));
+      }
+      const result = await t.flush();
+      const deliveries = await t.deliveries.list({ endpointId: endpoint.id });
+      return { t, endpoint, changed, result, deliveries };
+    }
+
+    it.each<[string, Change, string]>([
+      ['disabled', (t, id) => t.endpoints.update(id, { enabled: false }), 'endpoint-disabled'],
+      ['deleted', (t, id) => t.endpoints.delete(id), 'endpoint-deleted'],
+    ])('sends none of the rest of the batch to an endpoint %s during it', async (_, change, reason) => {
+      const { t, result, deliveries } = await changeDuringFirstRequest(change);
+      expect(t.transport.sent).toHaveLength(1);
+      expect(result).toMatchObject({ claimed: 3, delivered: 1, failed: 2 });
+      expect(deliveries.filter((d) => d.status === 'failed').map((d) => d.failureReason)).toEqual([reason, reason]);
+      await t.close();
+    });
+
+    it('sends the rest of the batch to the new URL', async () => {
+      const { t } = await changeDuringFirstRequest((t, id) => t.endpoints.update(id, { url: 'https://new.example/hooks' }));
+      expect(t.transport.sent.map((sent) => sent.url)).toEqual(['https://old.example/hooks', 'https://new.example/hooks', 'https://new.example/hooks']);
+      await t.close();
+    });
+
+    it('signs the rest of the batch with the new secret only after a rotation with overlap: 0', async () => {
+      const { t, endpoint, changed: rotated } = await changeDuringFirstRequest((t, id) => t.endpoints.rotateSecret(id, { overlap: 0 }));
+      const [first, ...rest] = t.transport.sent;
+      expect(first!.isSignedWith(endpoint.secret)).toBe(true);
+      expect(rest).toHaveLength(2);
+      for (const sent of rest) {
+        expect(sent.isSignedWith(endpoint.secret)).toBe(false);
+        expect(sent.isSignedWith(rotated!)).toBe(true);
+      }
+      await t.close();
+    });
+
+    it('fails the rest of the batch with the reason the worker disabled the endpoint for (410 Gone)', async () => {
+      const t = await sendingApp();
+      const endpoint = await t.endpoints.create({ url: 'https://gone.example/', eventTypes: ['*'] });
+      t.transport.respondWith(410);
+      for (const data of [1, 2]) {
+        await t.transaction((tx) => t.webhooks.dispatch(tx, { type: 'a.b', data }));
+      }
+      expect(await t.flush()).toMatchObject({ claimed: 2, failed: 2 });
+      expect(t.transport.sent).toHaveLength(1);
+      const skipped = (await t.deliveries.list({ endpointId: endpoint.id })).find((d) => d.failureReason === 'endpoint-disabled');
+      expect(skipped).toMatchObject({ lastError: `Endpoint ${endpoint.id} is disabled (gone)` });
+      await t.close();
+    });
+  });
+
   it('refuses a destination the transport blocks, without retrying, and reports it', async () => {
     const transport = new HttpWebhookTransport({ lookup: async () => [{ address: '169.254.169.254', family: 4 }] });
     const t = await sendingApp({ transport });
