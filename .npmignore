@@ -17,3 +17,6 @@ tsconfig.build.json
 vitest.config.ts
 # packed tarballs
 *.tgz
+
+# Claude Code
+.claude/
