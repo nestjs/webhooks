@@ -1,7 +1,18 @@
 {
   "name": "@nestjs/webhooks",
   "version": "0.0.4",
-  "description": "Nest - modern, fast, powerful node.js web framework (@webhooks)",
+  "description": "Webhooks for NestJS: send signed, retried webhooks to partners after the transaction commits, and verify the ones you receive on their raw body.",
+  "keywords": [
+    "nestjs",
+    "nest",
+    "webhooks",
+    "webhook",
+    "standard-webhooks",
+    "webhook-signature",
+    "hmac",
+    "signature-verification",
+    "retry"
+  ],
   "author": "Kamil Mysliwiec",
   "license": "MIT",
   "url": "https://github.com/nestjs/webhooks#readme",
