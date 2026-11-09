@@ -1,3 +1,4 @@
+import { validateHeaderValue } from 'node:http';
 import { optionMs, positiveMs, resolveRetry } from './backoff.util.js';
 import { plaintextSecrets, SecretCipher } from './encryption.util.js';
 import { exceedsInboxKey, MAX_INBOX_KEY_LENGTH } from './inbox-keys.util.js';
@@ -38,7 +39,7 @@ export function resolveConfig(options: WebhooksModuleOptions = {}): ResolvedWebh
     eventTypes,
     retry: resolveRetry(options.retry),
     timeoutMs,
-    userAgent: delivery.userAgent ?? 'NestJS-Webhooks/1.0',
+    userAgent: userAgent(delivery.userAgent ?? 'NestJS-Webhooks/1.0'),
     maxResponseSize: wholeNumber(delivery.maxResponseSize ?? 4_096, 'delivery.maxResponseSize', 0),
     worker: {
       enabled: workerOptions.enabled ?? true,
@@ -156,6 +157,16 @@ function toScheme(options: WebhookReceiverOptions, option: string): WebhookSigna
   throw new TypeError(
     `WebhooksModule: ${option}.scheme must be "standard", "stripe", "github" or a WebhookSignatureScheme instance (got ${JSON.stringify(scheme)})`,
   );
+}
+
+/** A user agent HTTP can carry: one that can't fails every attempt of the HTTP transport instead. */
+function userAgent(value: string): string {
+  try {
+    validateHeaderValue('user-agent', value);
+  } catch (error) {
+    throw new TypeError(`WebhooksModule: delivery.userAgent: ${(error as Error).message}`);
+  }
+  return value;
 }
 
 function wholeNumber(value: number, option: string, min = 1): number {
