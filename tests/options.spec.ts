@@ -88,6 +88,8 @@ describe('WebhooksModule startup errors', () => {
     ['an encryption key with whitespace', () => WebhooksModule.forRoot({ encryption: { keys: ['k'.repeat(40), ` ${'k'.repeat(40)}`] } }), /encryption.keys\[1\]` starts or ends with whitespace/],
     ['a malformed allowed IPv6 range', () => WebhooksModule.forRoot({ delivery: { allowedAddresses: ['fd12::/129'] } }), /delivery.allowedAddresses\[0\]` must be an IP address or a CIDR range/],
     ['a prefix that is not a number', () => WebhooksModule.forRoot({ delivery: { allowedAddresses: ['10.0.0.0/8', '10.0.0.0/x'] } }), /delivery.allowedAddresses\[1\]/],
+    ['a user agent with a line break', () => WebhooksModule.forRoot({ delivery: { userAgent: 'CatStore-Webhooks/2.0\n' } }), /delivery.userAgent/],
+    ['a user agent HTTP cannot carry', () => WebhooksModule.forRoot({ delivery: { userAgent: 'Cat Store — Webhooks/2.0' } }), /delivery.userAgent/],
   ])('fails on %s, naming the option', async (_name, module, message) => {
     await expect(Promise.resolve().then(() => compile(module()))).rejects.toThrow(message);
   });
