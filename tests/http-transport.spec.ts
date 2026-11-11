@@ -216,3 +216,20 @@ describe('HttpWebhookTransport over IPv6', () => {
     }
   });
 });
+
+describe('HttpWebhookTransport with several answers', () => {
+  it('falls back to a later address when the first one refuses the connection', async () => {
+    const server = await listen('127.0.0.1', (_req, res) => res.writeHead(204).end());
+    try {
+      // Nothing listens on ::1 at this port, so the first answer is refused or unreachable.
+      const lookup = async (): Promise<ResolvedAddress[]> => [
+        { address: '::1', family: 6 },
+        { address: '127.0.0.1', family: 4 },
+      ];
+      expect((await send(local({ lookup }), `http://multi.test:${server.port}/`)).statusCode).toBe(204);
+      expect(server.received).toHaveLength(1);
+    } finally {
+      await server.close();
+    }
+  });
+});

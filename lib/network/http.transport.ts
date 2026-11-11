@@ -73,15 +73,15 @@ export class HttpWebhookTransport extends WebhookTransport {
     return this.post(url, host, pinned, request, signal);
   }
 
-  /** The one address the socket may connect to, after every address of the host passed the policy. */
-  private async pin(raw: string, host: string, signal: AbortSignal): Promise<ResolvedAddress> {
+  /** The addresses the socket may connect to, after every one of them passed the policy. */
+  private async pin(raw: string, host: string, signal: AbortSignal): Promise<ResolvedAddress[]> {
     const literal = isIP(host);
     if (literal) {
-      return { address: host, family: literal as 4 | 6 };
+      return [{ address: host, family: literal as 4 | 6 }];
     }
     if (isLocalhostName(host)) {
       // checkDestination() allowed loopback; never ask a resolver what localhost is.
-      return { address: '127.0.0.1', family: 4 };
+      return [{ address: '127.0.0.1', family: 4 }];
     }
 
     const addresses = await abortable(this.resolve(host), signal);
@@ -96,25 +96,24 @@ export class HttpWebhookTransport extends WebhookTransport {
       }
     }
 
-    const first = addresses[0]!;
-    return { address: first.address, family: isIP(first.address) === 6 ? 6 : 4 };
+    return addresses.map(({ address }) => ({ address, family: isIP(address) === 6 ? 6 : 4 }));
   }
 
   private post(
     url: URL,
     host: string,
-    pinned: ResolvedAddress,
+    pinned: ResolvedAddress[],
     request: WebhookRequest,
     signal: AbortSignal,
   ): Promise<WebhookTransportResponse> {
     const body = Buffer.from(request.body, 'utf8');
 
-    // The socket's lookup answers with the checked address, whatever it is asked.
+    // The socket's lookup answers with the checked addresses, whatever it is asked, so autoSelectFamily can fall back.
     const lookup: LookupFunction = (_hostname, options, callback) => {
       if ((options as { all?: boolean }).all) {
-        (callback as unknown as (error: null, addresses: ResolvedAddress[]) => void)(null, [pinned]);
+        (callback as unknown as (error: null, addresses: ResolvedAddress[]) => void)(null, pinned);
       } else {
-        callback(null, pinned.address, pinned.family);
+        callback(null, pinned[0]!.address, pinned[0]!.family);
       }
     };
 
