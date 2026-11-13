@@ -115,6 +115,14 @@ describe('describeError and redactUrl', () => {
     expect(describeError(new Error('x'.repeat(2_000)))).toHaveLength(1_001);
   });
 
+  it('describes the errors of an AggregateError without a message (a connection that tried several addresses)', () => {
+    const refused = (address: string) => Object.assign(new Error(`connect ECONNREFUSED ${address}`), { code: 'ECONNREFUSED' });
+    // What node:net rejects with when every address of a host refuses the connection.
+    const error = Object.assign(new AggregateError([refused('10.0.0.1:443'), refused('2001:db8::1:443')]), { code: 'ECONNREFUSED' });
+    expect(describeError(error)).toBe('AggregateError: connect ECONNREFUSED 10.0.0.1:443; connect ECONNREFUSED 2001:db8::1:443');
+    expect(describeError(new AggregateError([new Error('a')], 'all failed'))).toBe('AggregateError: all failed');
+  });
+
   it('keeps the scheme, host and port of a URL, and nothing after', () => {
     expect(redactUrl('https://hooks.example.com:8443/t/abc?k=1')).toBe('https://hooks.example.com:8443/…');
     expect(redactUrl('https://hooks.example.com/?k=1')).toBe('https://hooks.example.com/…');

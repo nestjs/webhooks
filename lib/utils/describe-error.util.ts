@@ -16,7 +16,8 @@ export function describeError(error: unknown): string {
   try {
     if (error instanceof Error) {
       const code = (error as { code?: unknown }).code;
-      text = `${error.name}: ${error.message}${typeof code === 'string' && !error.message.includes(code) ? ` (${code})` : ''}`;
+      const message = error.message || aggregatedMessage(error);
+      text = `${error.name}: ${message}${typeof code === 'string' && !message.includes(code) ? ` (${code})` : ''}`;
     } else if (typeof error === 'string') {
       text = error;
     } else {
@@ -27,4 +28,9 @@ export function describeError(error: unknown): string {
   }
 
   return text.length > MAX_ERROR_LENGTH ? `${text.slice(0, MAX_ERROR_LENGTH)}…` : text;
+}
+
+/** An `AggregateError` without a message (node:net's, when every address of a host failed): its errors' messages. */
+function aggregatedMessage(error: Error): string {
+  return error instanceof AggregateError ? error.errors.map((inner) => (inner instanceof Error ? inner.message : String(inner))).join('; ') : '';
 }
